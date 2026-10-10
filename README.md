@@ -1,0 +1,1 @@
+Proyek Kedai Senja menggunakan JavaScript untuk simulasi data menu dan transaksi kasir.
