@@ -1,0 +1,1 @@
+Proyek Kedai Senja menggunakan JavaScript untuk eksperimen tipe data dan operasi kasir.
