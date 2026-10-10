@@ -1,0 +1,10 @@
+
+# Dependensi Node.js
+node_modules/
+
+# File konfigurasi rahasia
+.env
+
+# Sampah sistem operasi
+.DS_Store
+Thumbs.db
