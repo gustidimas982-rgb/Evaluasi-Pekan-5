@@ -167,3 +167,301 @@ console.log("Catatan kasir:", catatanKasir);
    karena menyimpan properti yang menjelaskan satu entitas kedai,
    seperti nama, kota, dan jam operasional.
 */
+
+// ==========================================
+// BAGIAN 3: PERHITUNGAN TRANSAKSI
+// ==========================================
+
+// Fungsi untuk menghitung satu transaksi
+function hitungTransaksi(dataTransaksi) {
+    // Menghitung subtotal dari semua item pesanan
+    let subtotal = 0;
+    let jumlahSeluruhItem = 0;
+    let semuaMenuTersedia = true;
+
+    for (const pesanan of dataTransaksi.pesanan) {
+        const itemMenu = menu[pesanan.indeksMenu];
+
+        subtotal += itemMenu.harga * pesanan.jumlah;
+        jumlahSeluruhItem += pesanan.jumlah;
+
+        if (!itemMenu.tersedia) {
+            semuaMenuTersedia = false;
+        }
+    }
+
+    // Diskon 10% hanya untuk member
+    const potongan = dataTransaksi.sudahMember
+        ? subtotal * 0.10
+        : 0;
+
+    // Pajak 11% dihitung setelah diskon
+    const dasarPajak = subtotal - potongan;
+    const pajak = dasarPajak * 0.11;
+
+    // Total yang harus dibayar
+    const totalBayar = dasarPajak + pajak;
+
+    // Menghitung kembalian dan kecukupan uang
+    const kembalian = dataTransaksi.uangBayar - totalBayar;
+    const uangCukup = dataTransaksi.uangBayar >= totalBayar;
+
+    // Gratis antar jika subtotal minimal Rp100.000
+    // ATAU jumlah seluruh item minimal 5
+    const gratisAntar = subtotal >= 100000 || jumlahSeluruhItem >= 5;
+
+    // Sisa kembalian dari operasi modulo, jika uang cukup
+    let sisaSetelah50000 = null;
+    let sisaSetelah20000 = null;
+
+    if (kembalian >= 0) {
+        sisaSetelah50000 = kembalian % 50000;
+        sisaSetelah20000 = sisaSetelah50000 % 20000;
+    }
+
+    return {
+        subtotal,
+        potongan,
+        pajak,
+        totalBayar,
+        kembalian,
+        uangCukup,
+        gratisAntar,
+        semuaMenuTersedia,
+        jumlahSeluruhItem,
+        sisaSetelah50000,
+        sisaSetelah20000
+    };
+}
+
+// Menghitung ketiga transaksi
+const hasilTransaksi1 = hitungTransaksi(transaksi[0]);
+const hasilTransaksi2 = hitungTransaksi(transaksi[1]);
+const hasilTransaksi3 = hitungTransaksi(transaksi[2]);
+
+// Membuat fungsi format Rupiah untuk laporan
+function rupiah(angka) {
+    return angka.toLocaleString("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        maximumFractionDigits: 2
+    });
+}
+
+// Mencetak ringkasan tiap transaksi
+function cetakRingkasan(data, hasil, nomor) {
+    console.log(`
+========================================
+RINGKASAN TRANSAKSI ${nomor}
+========================================
+Kode transaksi     : ${data.kode}
+Pelanggan          : ${data.pelanggan}
+Status member      : ${data.sudahMember ? "Ya" : "Tidak"}
+Subtotal           : ${rupiah(hasil.subtotal)}
+Potongan           : ${rupiah(hasil.potongan)}
+Pajak 11%          : ${rupiah(hasil.pajak)}
+Total bayar        : ${rupiah(hasil.totalBayar)}
+Uang bayar         : ${rupiah(data.uangBayar)}
+Kembalian          : ${rupiah(hasil.kembalian)}
+Uang cukup         : ${hasil.uangCukup}
+Gratis antar       : ${hasil.gratisAntar}
+Semua menu tersedia: ${hasil.semuaMenuTersedia}
+Jumlah seluruh item: ${hasil.jumlahSeluruhItem}
+Sisa setelah 50000  : ${hasil.sisaSetelah50000 === null ? "-" : rupiah(hasil.sisaSetelah50000)}
+Sisa setelah 20000  : ${hasil.sisaSetelah20000 === null ? "-" : rupiah(hasil.sisaSetelah20000)}
+========================================
+`);
+}
+
+cetakRingkasan(transaksi[0], hasilTransaksi1, 1);
+cetakRingkasan(transaksi[1], hasilTransaksi2, 2);
+cetakRingkasan(transaksi[2], hasilTransaksi3, 3);
+
+// ==========================================
+// LAPORAN HARIAN
+// ==========================================
+
+let pendapatanHarian = 0;
+let jumlahTransaksi = 0;
+
+pendapatanHarian += hasilTransaksi1.totalBayar;
+jumlahTransaksi++;
+
+pendapatanHarian += hasilTransaksi2.totalBayar;
+jumlahTransaksi++;
+
+pendapatanHarian += hasilTransaksi3.totalBayar;
+jumlahTransaksi++;
+
+const rataRataPendapatan = pendapatanHarian / jumlahTransaksi;
+
+const totalTertinggi = Math.max(
+    hasilTransaksi1.totalBayar,
+    hasilTransaksi2.totalBayar,
+    hasilTransaksi3.totalBayar
+);
+
+const totalTerendah = Math.min(
+    hasilTransaksi1.totalBayar,
+    hasilTransaksi2.totalBayar,
+    hasilTransaksi3.totalBayar
+);
+
+const selisihTerbesar = totalTertinggi - totalTerendah;
+
+const persentaseTransaksiPertama =
+    (hasilTransaksi1.totalBayar / pendapatanHarian) * 100;
+
+// Simulasi kenaikan harga 5% setiap bulan selama 3 bulan
+const hargaKopiTigaBulan = menu[0].harga * (1.05 ** 3);
+
+// Judul dan laporan harian
+console.log(`
+========================================
+LAPORAN HARIAN ${kedai.nama.toUpperCase()}
+========================================
+Jumlah transaksi              : ${jumlahTransaksi}
+Pendapatan harian             : ${rupiah(pendapatanHarian)}
+Rata-rata pendapatan          : ${rupiah(rataRataPendapatan)}
+Total tertinggi               : ${rupiah(totalTertinggi)}
+Total terendah                : ${rupiah(totalTerendah)}
+Selisih terbesar              : ${rupiah(selisihTerbesar)}
+Porsi transaksi pertama       : ${persentaseTransaksiPertama.toFixed(2)}%
+Harga Kopi Senja setelah 3 bln: ${rupiah(hargaKopiTigaBulan)}
+========================================
+`);
+
+// ==========================================
+// JAWABAN TEORI BAGIAN 3
+// ==========================================
+
+/*
+1. PERHITUNGAN MANUAL TRANSAKSI TRX-002
+
+   Pesanan:
+   - Espresso: 2 x Rp20.000 = Rp40.000
+   - Croissant: 1 x Rp22.000 = Rp22.000
+
+   Subtotal:
+   Rp40.000 + Rp22.000 = Rp62.000
+
+   Potongan member:
+   10% x Rp62.000 = Rp6.200
+
+   Dasar pengenaan pajak:
+   Rp62.000 - Rp6.200 = Rp55.800
+
+   Pajak:
+   11% x Rp55.800 = Rp6.138
+
+   Total bayar:
+   Rp55.800 + Rp6.138 = Rp61.938
+
+   Kembalian:
+   Rp70.000 - Rp61.938 = Rp8.062
+
+   Hasil manual sama dengan hasil program.
+
+
+2. PERBANDINGAN || DAN && PADA TRX-003
+
+   Subtotal TRX-003 = Rp100.000
+   Jumlah item = 4
+
+   Dengan ||:
+   Rp100.000 >= Rp100.000 bernilai true.
+   4 >= 5 bernilai false.
+   true || false menghasilkan true.
+   Jadi, gratis antar = true.
+
+   Dengan &&:
+   true && false menghasilkan false.
+   Jadi, gratis antar = false.
+
+   Perbedaannya adalah || menghasilkan true jika minimal
+   satu kondisi benar, sedangkan && hanya menghasilkan true
+   jika kedua kondisi benar.
+
+   Untuk menguji &&, ubah sementara baris gratisAntar
+   pada fungsi hitungTransaksi menjadi:
+   const gratisAntar = subtotal >= 100000 && jumlahSeluruhItem >= 5;
+
+
+3. CONTOH PENGARUH TANDA KURUNG
+
+   Misalnya subtotal = 100000 dan potongan = 10000.
+
+   Dengan tanda kurung:
+   (100000 - 10000) * 0.11 = 9900
+
+   Tanpa tanda kurung:
+   100000 - 10000 * 0.11 = 98900
+
+   Hasil berbeda karena perkalian dikerjakan sebelum
+   pengurangan jika tidak ada tanda kurung.
+
+
+4. CONTOH VARIABEL const DAN let
+
+   Variabel const:
+   - kedai: referensi object kedai tidak diganti.
+   - menu: referensi array menu tidak diganti.
+   - hargaKopiTigaBulan: nilai hasil simulasi tidak diubah.
+
+   Variabel let:
+   - subtotal: bertambah ketika setiap item dihitung.
+   - pendapatanHarian: bertambah dengan operator +=.
+   - jumlahTransaksi: bertambah dengan operator ++.
+
+   const digunakan untuk variabel yang tidak perlu diberi
+   nilai baru melalui penugasan ulang. let digunakan untuk
+   variabel yang nilainya perlu berubah selama program berjalan.
+   Properti object atau isi array yang dideklarasikan dengan
+   const tetap dapat diubah.
+
+
+5. SIMULASI KENAIKAN HARGA
+
+   Kenaikan 5% per bulan selama 3 bulan bersifat majemuk.
+
+   Rumus:
+   harga awal * (1.05 ** 3)
+
+   Dengan harga awal Rp25.000:
+   25000 * (1.05 ** 3) = 28940.625
+
+   Jika memakai 25000 * 1.05 * 3, hasilnya Rp78.750,
+   yang bukan simulasi kenaikan harga selama tiga bulan.
+
+   1.05 ** 3 = 1.157625
+   1.05 * 3 = 3.15
+
+   Operator ** menghitung perpangkatan, sedangkan * menghitung
+   perkalian biasa.
+
+
+6. PERUBAHAN HARGA MENU
+
+   Hasil perhitungan yang sudah disimpan dalam variabel
+   tidak dihitung ulang secara otomatis ketika harga menu
+   diubah. Console.log yang sudah dijalankan juga tidak
+   diperbarui secara otomatis.
+
+   Jika fungsi hitungTransaksi dipanggil kembali setelah
+   harga menu diubah, hasil perhitungan baru akan mengikuti
+   harga terbaru. Contoh pembuktiannya terdapat pada kode
+   demonstrasi setelah komentar ini.
+*/
+
+// Demonstrasi: hasil lama dibandingkan dengan hasil hitung ulang
+const totalLamaTRX001 = hasilTransaksi1.totalBayar;
+
+menu[0].harga = 30000;
+
+const totalBaruTRX001 = hitungTransaksi(transaksi[0]).totalBayar;
+
+console.log("Total TRX-001 sebelum harga diubah:", rupiah(totalLamaTRX001));
+console.log("Total TRX-001 setelah dihitung ulang:", rupiah(totalBaruTRX001));
+
+// Kembalikan harga awal agar data proyek tetap konsisten
+menu[0].harga = 25000;
